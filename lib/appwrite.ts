@@ -37,8 +37,6 @@ export async function loginWithGoogle() {
       redirectUri
     );
 
-    console.log("Browser response:", browserResponse); // Log the browser response for debugging
-
     if (!browserResponse.type) {
       throw new Error("OAuth2 login failed: No response type received");
     }
