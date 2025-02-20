@@ -1,6 +1,15 @@
-import { createContext, useContext } from "react";
-import { useAppwrite } from "./useAppwrite";
+import React, { createContext, useContext, ReactNode } from "react";
+
 import { getCurrentUser } from "./appwrite";
+import { useAppwrite } from "./useAppwrite";
+import { Redirect } from "expo-router";
+
+interface GlobalContextType {
+  isLoggedIn: boolean;
+  currentUser: User | null;
+  loading: boolean;
+  refetch: () => void;
+}
 
 interface User {
   $id: string;
@@ -9,32 +18,36 @@ interface User {
   avatar: string;
 }
 
-interface GlobalContextType {
-  isLoggedIn: boolean;
-  currentUser: User | null;
-  loading: boolean;
-  refetch: (newParams?: Record<string, string | number>) => Promise<void>;
-}
-
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 
-export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
+interface GlobalProviderProps {
+  children: ReactNode;
+}
+
+export const GlobalProvider = ({ children }: GlobalProviderProps) => {
   const {
-    data: user,
+    data: userData,
     loading,
     refetch,
   } = useAppwrite({
     fn: getCurrentUser,
   });
-  const isLoggedIn = !!user;
+
+  const currentUser = userData ?? null; // Ensure it's either a User object or null
+
+  const isLoggedIn = !!currentUser;
+
+  const safeRefetch = () => {
+    refetch({}); // Ensure it gets an empty object to avoid argument issues
+  };
 
   return (
     <GlobalContext.Provider
       value={{
         isLoggedIn,
-        user,
+        currentUser,
         loading,
-        refetch,
+        refetch: safeRefetch,
       }}
     >
       {children}
@@ -42,11 +55,11 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export const useGlobalContext = () => {
+export const useGlobalContext = (): GlobalContextType => {
   const context = useContext(GlobalContext);
-  if (!context) {
+  if (!context)
     throw new Error("useGlobalContext must be used within a GlobalProvider");
-  }
+
   return context;
 };
 
