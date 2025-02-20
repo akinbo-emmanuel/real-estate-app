@@ -29,7 +29,7 @@ export async function loginWithGoogle() {
     );
 
     if (!response) {
-      throw new Error("Failed to login with Google");
+      throw new Error("OAuth2 token creation failed: No response received");
     }
 
     const browserResponse = await openAuthSessionAsync(
@@ -37,8 +37,18 @@ export async function loginWithGoogle() {
       redirectUri
     );
 
-    if (!browserResponse.type || browserResponse.type !== "success") {
-      throw new Error("Failed to login with Google");
+    console.log("Browser response:", browserResponse); // Log the browser response for debugging
+
+    if (!browserResponse.type) {
+      throw new Error("OAuth2 login failed: No response type received");
+    }
+
+    if (browserResponse.type === "dismiss") {
+      throw new Error("OAuth2 login was dismissed by the user");
+    }
+
+    if (browserResponse.type !== "success") {
+      throw new Error("OAuth2 login failed: Invalid response type");
     }
 
     const url = new URL(browserResponse.url);
@@ -47,18 +57,18 @@ export async function loginWithGoogle() {
     const userId = url.searchParams.get("userId")?.toString();
 
     if (!secret || !userId) {
-      throw new Error("Failed to login with Google");
+      throw new Error("OAuth2 login failed: Missing secret or userId");
     }
 
     const session = await account.createSession(userId, secret);
 
     if (!session) {
-      throw new Error("Failed to login with Google");
+      throw new Error("Session creation failed: No session returned");
     }
 
     return true;
-  } catch (error) {
-    console.error(error);
+  } catch (error: any) {
+    console.error("Login error:", error.message);
     return false;
   }
 }
